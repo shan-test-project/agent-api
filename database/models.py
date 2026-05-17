@@ -115,7 +115,7 @@ async def get_chat_history(user_id: int, project: str = "default", limit: int = 
         )
         messages = result.scalars().all()
         return [
-            {"role": m.role, "content": m.content, "type": m.message_type}
+            {"role": m.role, "content": m.content}
             for m in reversed(messages)
         ]
 
