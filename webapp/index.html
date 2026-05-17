@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ReplitAI</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">⚡ ReplitAI</div>
+      <div class="project-badge" id="projectBadge">default</div>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn" id="themeToggle" title="Toggle theme">🌙</button>
+      <button class="icon-btn" id="statusBtn" title="Status">📊</button>
+    </div>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="chat">💬 Chat</button>
+    <button class="tab" data-tab="terminal">⌨️ Terminal</button>
+    <button class="tab" data-tab="files">📁 Files</button>
+    <button class="tab" data-tab="projects">📦 Projects</button>
+  </nav>
+
+  <!-- Chat Tab -->
+  <div class="tab-content active" id="tab-chat">
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+      <div class="quick-actions">
+        <button class="quick-btn" data-msg="Run the project">▶️ Run</button>
+        <button class="quick-btn" data-msg="Run all tests">🧪 Test</button>
+        <button class="quick-btn" data-msg="Review my code for issues">🔍 Review</button>
+        <button class="quick-btn" data-msg="Generate Dockerfile and deploy instructions">🚀 Deploy</button>
+        <button class="quick-btn" data-msg="Scan for security vulnerabilities">🔒 Security</button>
+        <button class="quick-btn" data-msg="Show me the project file structure">📁 Files</button>
+      </div>
+      <div class="input-row">
+        <textarea id="chatInput" placeholder="Ask me to code anything..." rows="2"></textarea>
+        <button class="send-btn" id="sendBtn">⬆️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Terminal Tab -->
+  <div class="tab-content" id="tab-terminal">
+    <div class="terminal-toolbar">
+      <span class="terminal-title">🖥️ Terminal</span>
+      <div class="terminal-actions">
+        <button class="tool-btn" id="clearTerminal">Clear</button>
+        <button class="tool-btn" id="reconnectTerminal">Reconnect</button>
+      </div>
+    </div>
+    <div id="terminal"></div>
+    <div class="terminal-input-row">
+      <span class="prompt">$</span>
+      <input type="text" id="terminalInput" placeholder="Enter command..." autocomplete="off" spellcheck="false">
+      <button class="send-btn" id="terminalSend">⬆️</button>
+    </div>
+  </div>
+
+  <!-- Files Tab -->
+  <div class="tab-content" id="tab-files">
+    <div class="files-header">
+      <span>📁 Project Files</span>
+      <button class="tool-btn" id="refreshFiles">Refresh</button>
+    </div>
+    <div class="file-tree" id="fileTree"></div>
+    <div class="file-viewer" id="fileViewer">
+      <div class="file-viewer-placeholder">Select a file to view its contents</div>
+    </div>
+  </div>
+
+  <!-- Projects Tab -->
+  <div class="tab-content" id="tab-projects">
+    <div class="projects-header">
+      <span>📦 Your Projects</span>
+      <button class="tool-btn" id="newProject">+ New</button>
+    </div>
+    <div class="project-list" id="projectList"></div>
+  </div>
+</div>
+
+<!-- Code Modal -->
+<div class="modal" id="codeModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span id="modalTitle">Code</span>
+      <div class="modal-actions">
+        <button class="tool-btn" id="runCode">▶️ Run</button>
+        <button class="tool-btn" id="copyCode">📋 Copy</button>
+        <button class="icon-btn" id="closeModal">✕</button>
+      </div>
+    </div>
+    <pre><code id="modalCode" class="language-python"></code></pre>
+    <div class="code-output" id="codeOutput"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
