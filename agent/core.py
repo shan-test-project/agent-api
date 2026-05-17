@@ -416,7 +416,8 @@ async def run_agent(
     content_parts.append(user_message)
     full_user_content = "\n".join(content_parts)
 
-    messages = list(history[-20:])
+    # Strip any non-standard fields — Groq only accepts role + content
+    messages = [{"role": m["role"], "content": m["content"]} for m in history[-20:]]
     messages.append({"role": "user", "content": full_user_content})
 
     system_prompt = SYSTEM_IDENTITY
@@ -510,10 +511,8 @@ async def run_agent(
                 return final
 
         except Exception as e:
-            logger.error(f"Agent loop error at iteration {iteration}: {e}")
-            if iteration >= MAX_TOOL_ITERATIONS - 2:
-                return f"I encountered an issue: {e}. Please try again."
-            continue
+            logger.error(f"Agent loop error at iteration {iteration}: {e}", exc_info=True)
+            raise
 
     return "I completed the task. Let me know if you need anything else!"
 
