@@ -458,26 +458,43 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await _send_typing(update, context)
 
-    settings = await get_or_create_settings(user.id, user.username or "")
-    await save_message(user.id, "user", text, settings.active_project)
-    history = await get_chat_history(user.id, settings.active_project, 20)
-    project_dir = str(SANDBOX_DIR / f"user_{user.id}" / settings.active_project)
+    status_msg = None
+    try:
+        settings = await get_or_create_settings(user.id, user.username or "")
+        await save_message(user.id, "user", text, settings.active_project)
+        history = await get_chat_history(user.id, settings.active_project, 20)
+        project_dir = str(SANDBOX_DIR / f"user_{user.id}" / settings.active_project)
 
-    status_msg = await update.effective_chat.send_message(f"{THINKING_EMOJI} Thinking...")
+        status_msg = await update.effective_chat.send_message(f"{THINKING_EMOJI} Thinking...")
 
-    async def status_cb(msg: str):
+        async def status_cb(msg: str):
+            try:
+                await status_msg.edit_text(msg)
+            except Exception:
+                pass
+
+        response = await run_agent(
+            text, user.id, history, project_dir, settings.active_project,
+            status_callback=status_cb,
+        )
         try:
-            await status_msg.edit_text(msg)
+            await status_msg.delete()
         except Exception:
             pass
+        await save_message(user.id, "assistant", response, settings.active_project)
+        await _reply(update, response, keyboard=_action_keyboard(), reply_to=True)
 
-    response = await run_agent(
-        text, user.id, history, project_dir, settings.active_project,
-        status_callback=status_cb,
-    )
-    await status_msg.delete()
-    await save_message(user.id, "assistant", response, settings.active_project)
-    await _reply(update, response, keyboard=_action_keyboard(), reply_to=True)
+    except Exception as e:
+        logger.error(f"handle_message error: {e}", exc_info=True)
+        try:
+            if status_msg:
+                await status_msg.delete()
+        except Exception:
+            pass
+        await update.effective_chat.send_message(
+            f"⚠️ Something went wrong: `{type(e).__name__}: {str(e)[:200]}`\n\nPlease try again.",
+            parse_mode=ParseMode.MARKDOWN,
+        )
 
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
