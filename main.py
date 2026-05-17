@@ -43,9 +43,43 @@ logger = logging.getLogger(__name__)
 THINKING_EMOJI = "🧠"
 CODING_EMOJI = "💻"
 
+TOOL_LABELS = {
+    "execute_code":          "⚙️ Running code...",
+    "execute_shell":         "🖥️ Running shell command...",
+    "install_package":       "📦 Installing packages...",
+    "write_file":            "📝 Writing file...",
+    "read_file":             "📖 Reading file...",
+    "list_files":            "📂 Listing files...",
+    "search_code":           "🔍 Searching codebase...",
+    "run_tests":             "🧪 Running tests...",
+    "web_search":            "🌐 Searching the web...",
+    "fetch_url":             "🌐 Fetching page...",
+    "git_clone":             "📥 Cloning repository...",
+    "git_commit_push":       "📤 Pushing to GitHub...",
+    "git_create_repo":       "🗂️ Creating GitHub repo...",
+    "git_list_repos":        "📋 Listing repos...",
+    "generate_dockerfile":   "🐳 Generating Dockerfile...",
+    "deploy_to_platform":    "🚀 Preparing deployment...",
+    "save_memory":           "💾 Saving to memory...",
+    "create_project_structure": "🏗️ Creating project structure...",
+}
+
 
 async def _send_typing(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_chat_action(update.effective_chat.id, ChatAction.TYPING)
+
+
+async def _continuous_typing(chat_id: int, context: ContextTypes.DEFAULT_TYPE, stop_event: asyncio.Event):
+    """Keep sending TYPING action every 4s so Telegram shows it next to the bot name."""
+    while not stop_event.is_set():
+        try:
+            await context.bot.send_chat_action(chat_id, ChatAction.TYPING)
+        except Exception:
+            pass
+        try:
+            await asyncio.wait_for(asyncio.shield(stop_event.wait()), timeout=4)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            pass
 
 
 def _split_message(text: str, max_len: int = 4000) -> list[str]:
@@ -456,9 +490,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not text:
         return
 
-    await _send_typing(update, context)
-
     status_msg = None
+    stop_typing = asyncio.Event()
+    typing_task = asyncio.create_task(
+        _continuous_typing(update.effective_chat.id, context, stop_typing)
+    )
+
     try:
         settings = await get_or_create_settings(user.id, user.username or "")
         await save_message(user.id, "user", text, settings.active_project)
@@ -467,9 +504,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         status_msg = await update.effective_chat.send_message(f"{THINKING_EMOJI} Thinking...")
 
-        async def status_cb(msg: str):
+        async def status_cb(raw: str):
             try:
-                await status_msg.edit_text(msg)
+                # raw is like "🔧 [CODER] using write_file..." — extract tool name
+                tool_name = None
+                for t in TOOL_LABELS:
+                    if t in raw:
+                        tool_name = t
+                        break
+                label = TOOL_LABELS.get(tool_name, raw) if tool_name else raw
+                await status_msg.edit_text(label)
             except Exception:
                 pass
 
@@ -477,6 +521,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text, user.id, history, project_dir, settings.active_project,
             status_callback=status_cb,
         )
+        stop_typing.set()
         try:
             await status_msg.delete()
         except Exception:
@@ -485,6 +530,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _reply(update, response, keyboard=_action_keyboard(), reply_to=True)
 
     except Exception as e:
+        stop_typing.set()
         logger.error(f"handle_message error: {e}", exc_info=True)
         try:
             if status_msg:
@@ -492,9 +538,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
         await update.effective_chat.send_message(
-            f"⚠️ Something went wrong: `{type(e).__name__}: {str(e)[:200]}`\n\nPlease try again.",
+            f"⚠️ Error: `{type(e).__name__}: {str(e)[:300]}`\n\nPlease try again.",
             parse_mode=ParseMode.MARKDOWN,
         )
+    finally:
+        stop_typing.set()
+        typing_task.cancel()
+        try:
+            await typing_task
+        except asyncio.CancelledError:
+            pass
 
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
